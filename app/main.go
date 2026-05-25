@@ -8,7 +8,6 @@ import (
 )
 
 func main() {
-loop:
 	for {
 		fmt.Print("$ ")
 		command, err := bufio.NewReader(os.Stdin).ReadString('\n')
@@ -16,10 +15,11 @@ loop:
 			panic("can not read the input")
 		}
 		command = strings.TrimSpace(command[:len(command)-1])
-		switch command {
-		case "exit":
-			break loop
-		default:
+		if command == "exit" {
+			break
+		} else if strings.HasPrefix(command, "echo ") {
+			fmt.Println(command[5:])
+		} else {
 			fmt.Println(command + ": command not found")
 		}
 	}
