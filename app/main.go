@@ -20,8 +20,11 @@ func lookupExecPath(command string) (string, error) {
 	for _, path := range strings.Split(execPath, string(os.PathListSeparator)) {
 		expectedPath := filepath.Join(path, command)
 		info, err := os.Stat(expectedPath)
-		if err == nil || info.Mode().Perm()&0111 == 0 {
-			break
+		if err != nil {
+			continue
+		}
+		if info.Mode().Perm()&0111 != 0 {
+			return path, nil
 		}
 	}
 	return "", errors.New("exec path not found")
@@ -53,7 +56,7 @@ func main() {
 		} else if strings.HasPrefix(command, fmt.Sprintf("%s ", Echo)) {
 			fmt.Println(command[5:])
 		} else if strings.HasPrefix(command, fmt.Sprintf("%s ", Type)) {
-			fmt.Println(getType(command))
+			fmt.Println(getType(command[5:]))
 		} else {
 			fmt.Printf("%s: command not found\n", command)
 		}
