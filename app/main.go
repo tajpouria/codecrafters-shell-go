@@ -2,8 +2,10 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -13,15 +15,27 @@ const (
 	Type = "type"
 )
 
-func getType(command string) string {
-	var cmd string
-	switch command {
-	case Exit, Echo, Type:
-		cmd = "is a shell builtin"
-	default:
-		cmd = "not found"
+func lookupExecPath(command string) (string, error) {
+	execPath := os.Getenv("PATH")
+	for _, path := range strings.Split(execPath, string(os.PathListSeparator)) {
+		expectedPath := filepath.Join(path, command)
+		info, err := os.Stat(expectedPath)
+		if err == nil || info.Mode().Perm()&0111 == 0 {
+			break
+		}
 	}
-	return cmd
+	return "", errors.New("exec path not found")
+}
+
+func getType(command string) string {
+	if command == Exit || command == Echo || command == Type {
+		return fmt.Sprintf("%s is a shell builtin", command)
+	}
+	path, err := lookupExecPath(command)
+	if err == nil {
+		return fmt.Sprintf("%s is %s/%s", command, path, command)
+	}
+	return fmt.Sprintf("%s: not found", command)
 }
 
 func main() {
@@ -39,7 +53,7 @@ func main() {
 		} else if strings.HasPrefix(command, fmt.Sprintf("%s ", Echo)) {
 			fmt.Println(command[5:])
 		} else if strings.HasPrefix(command, fmt.Sprintf("%s ", Type)) {
-			fmt.Printf("%s %s\n", command[5:], getType(command[5:]))
+			fmt.Println(getType(command))
 		} else {
 			fmt.Printf("%s: command not found\n", command)
 		}
