@@ -70,10 +70,7 @@ loop:
 
 		_, err = lookupExecPath(command)
 		if err == nil {
-			cmd := exec.Command(
-				command,
-				argsSlice...,
-			)
+			cmd := exec.Command(command, argsSlice...)
 			output, _ := cmd.Output()
 			fmt.Print(string(output))
 			continue loop
