@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -16,15 +17,15 @@ const (
 )
 
 func lookupExecPath(command string) (string, error) {
-	execPath := os.Getenv("PATH")
-	for _, path := range strings.Split(execPath, string(os.PathListSeparator)) {
-		expectedPath := filepath.Join(path, command)
+	execPathList := os.Getenv("PATH")
+	for _, execPath := range strings.Split(execPathList, string(os.PathListSeparator)) {
+		expectedPath := filepath.Join(execPath, command)
 		info, err := os.Stat(expectedPath)
 		if err != nil {
 			continue
 		}
 		if info.Mode().Perm()&0111 != 0 {
-			return path, nil
+			return execPath, nil
 		}
 	}
 	return "", errors.New("exec path not found")
@@ -42,23 +43,45 @@ func getType(command string) string {
 }
 
 func main() {
+loop:
 	for {
 		fmt.Print("$ ")
-		command, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		statement, err := bufio.NewReader(os.Stdin).ReadString('\n')
 		if err != nil {
 			panic("can not read the input")
 		}
-		command = strings.TrimSpace(command[:len(command)-1])
-		if command == "" {
-			continue
-		} else if command == Exit {
-			break
-		} else if strings.HasPrefix(command, fmt.Sprintf("%s ", Echo)) {
-			fmt.Println(command[5:])
-		} else if strings.HasPrefix(command, fmt.Sprintf("%s ", Type)) {
-			fmt.Println(getType(command[5:]))
-		} else {
-			fmt.Printf("%s: command not found\n", command)
+		statement = strings.TrimSpace(statement[:len(statement)-1])
+
+		statementSlice := strings.Split(statement, " ")
+		command, argsSlice := statementSlice[0], statementSlice[1:]
+
+		switch command {
+		case "":
+			continue loop
+		case Exit:
+			break loop
+		case Echo:
+			fmt.Println(strings.Join(argsSlice, " "))
+			continue loop
+		case Type:
+			fmt.Println(getType(strings.Join(argsSlice, " ")))
+			continue loop
 		}
+
+		execPath, err := lookupExecPath(command)
+		if err == nil {
+			cmd := exec.Command(
+				filepath.Join(
+					execPath,
+					command,
+				),
+				argsSlice...,
+			)
+			output, _ := cmd.Output()
+			fmt.Print(string(output))
+			continue loop
+		}
+
+		fmt.Printf("%s: command not found\n", statement)
 	}
 }
