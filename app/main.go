@@ -68,13 +68,10 @@ loop:
 			continue loop
 		}
 
-		execPath, err := lookupExecPath(command)
+		_, err = lookupExecPath(command)
 		if err == nil {
 			cmd := exec.Command(
-				filepath.Join(
-					execPath,
-					command,
-				),
+				command,
 				argsSlice...,
 			)
 			output, _ := cmd.Output()
