@@ -15,6 +15,7 @@ const (
 	Echo = "echo"
 	Type = "type"
 	Pwd  = "pwd"
+	Cd   = "cd"
 )
 
 var builtinCommands = map[string]string{
@@ -22,12 +23,12 @@ var builtinCommands = map[string]string{
 	Echo: Echo,
 	Type: Type,
 	Pwd:  Pwd,
+	Cd:   Cd,
 }
-
-var wd string
 
 func lookupExecPath(command string) (string, error) {
 	execPathList := os.Getenv("PATH")
+	// TODO: use SplitSeq
 	for _, execPath := range strings.Split(execPathList, string(os.PathListSeparator)) {
 		expectedPath := filepath.Join(execPath, command)
 		info, err := os.Stat(expectedPath)
@@ -52,15 +53,31 @@ func getType(command string) string {
 	return fmt.Sprintf("%s: not found", command)
 }
 
+func changeDirectory(dir string) string {
+	if strings.HasPrefix(dir, "~") {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Sprintf("error getting user home directory: %v\n", err)
+		}
+		dir = strings.Replace(dir, "~", homeDir, 1)
+	}
+	if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
+		return fmt.Sprintf("cd: %s: No such file or directory\n", dir)
+	} else if err != nil {
+		return fmt.Sprintf("error getting dir stats: %v\n", err)
+	}
+	// TODO: check for info.isDir() ?
+
+	if err := os.Chdir(dir); err != nil {
+		return fmt.Sprintf("error chaing directory %v\n", err)
+	}
+
+	return ""
+}
+
 func main() {
 loop:
 	for {
-		path, err := os.Getwd()
-		if err != nil {
-			panic(err)
-		}
-		wd = path
-
 		fmt.Print("$ ")
 		statement, err := bufio.NewReader(os.Stdin).ReadString('\n')
 		if err != nil {
@@ -83,7 +100,19 @@ loop:
 			fmt.Println(getType(strings.Join(argsSlice, " ")))
 			continue loop
 		case builtinCommands[Pwd]:
+			wd, err := os.Getwd()
+			if err != nil {
+				fmt.Printf("error getting working directory: %v\n", err)
+				continue loop
+			}
 			fmt.Println(wd)
+			continue loop
+		case builtinCommands[Cd]:
+			dir := ""
+			if len(argsSlice) > 0 {
+				dir = argsSlice[0]
+			}
+			fmt.Print(changeDirectory(dir))
 			continue loop
 		}
 
