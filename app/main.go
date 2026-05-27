@@ -14,7 +14,17 @@ const (
 	Exit = "exit"
 	Echo = "echo"
 	Type = "type"
+	Pwd  = "pwd"
 )
+
+var builtinCommands = map[string]string{
+	Exit: Exit,
+	Echo: Echo,
+	Type: Type,
+	Pwd:  Pwd,
+}
+
+var wd string
 
 func lookupExecPath(command string) (string, error) {
 	execPathList := os.Getenv("PATH")
@@ -32,7 +42,7 @@ func lookupExecPath(command string) (string, error) {
 }
 
 func getType(command string) string {
-	if command == Exit || command == Echo || command == Type {
+	if _, ok := builtinCommands[command]; ok {
 		return fmt.Sprintf("%s is a shell builtin", command)
 	}
 	path, err := lookupExecPath(command)
@@ -45,10 +55,16 @@ func getType(command string) string {
 func main() {
 loop:
 	for {
+		path, err := os.Getwd()
+		if err != nil {
+			panic(err)
+		}
+		wd = path
+
 		fmt.Print("$ ")
 		statement, err := bufio.NewReader(os.Stdin).ReadString('\n')
 		if err != nil {
-			panic("can not read the input")
+			panic(err)
 		}
 		statement = strings.TrimSpace(statement[:len(statement)-1])
 
@@ -58,13 +74,16 @@ loop:
 		switch command {
 		case "":
 			continue loop
-		case Exit:
+		case builtinCommands[Exit]:
 			break loop
-		case Echo:
+		case builtinCommands[Echo]:
 			fmt.Println(strings.Join(argsSlice, " "))
 			continue loop
-		case Type:
+		case builtinCommands[Type]:
 			fmt.Println(getType(strings.Join(argsSlice, " ")))
+			continue loop
+		case builtinCommands[Pwd]:
+			fmt.Println(wd)
 			continue loop
 		}
 
