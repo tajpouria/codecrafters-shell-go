@@ -103,19 +103,15 @@ loop:
 						argsSlice = append(argsSlice, p)
 					} else {
 						// part was note quoted
-						var ppSlice []string
 						for _, pp := range strings.Split(p, " ") {
 							if pp = strings.TrimSpace(pp); pp != "" {
-								ppSlice = append(ppSlice, strings.TrimSpace(pp))
+								argsSlice = append(argsSlice, strings.TrimSpace(pp))
 							}
 						}
-						argsSlice = append(argsSlice, strings.Join(ppSlice, " "))
 					}
 				}
 			}
 		}
-
-		fmt.Printf("%#v", argsSlice)
 
 		switch command {
 		case "":
