@@ -97,8 +97,8 @@ loop:
 				if p = strings.TrimSpace(p); p != "" && p != "\n" {
 					if pi-1 >= 0 &&
 						pi+1 <= len(qParts)-1 &&
-						qParts[pi-1] == "" &&
-						qParts[pi+1] == "" {
+						strings.TrimSpace(qParts[pi-1]) == "" &&
+						strings.TrimSpace(qParts[pi+1]) == "" {
 						// part was quoted
 						argsSlice = append(argsSlice, p)
 					} else {
