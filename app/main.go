@@ -115,6 +115,8 @@ loop:
 			}
 		}
 
+		fmt.Printf("%#v", argsSlice)
+
 		switch command {
 		case "":
 			continue loop
