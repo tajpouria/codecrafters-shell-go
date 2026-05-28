@@ -69,7 +69,7 @@ func changeDirectory(dir string) string {
 	// TODO: check for info.isDir() ?
 
 	if err := os.Chdir(dir); err != nil {
-		return fmt.Sprintf("error chaing directory %v\n", err)
+		return fmt.Sprintf("error changing directory %v\n", err)
 	}
 
 	return ""
@@ -83,10 +83,37 @@ loop:
 		if err != nil {
 			panic(err)
 		}
-		statement = strings.TrimSpace(statement[:len(statement)-1])
+		statement = statement[:len(statement)-1]
 
-		statementSlice := strings.Split(statement, " ")
-		command, argsSlice := statementSlice[0], statementSlice[1:]
+		statement = strings.ReplaceAll(statement, "''", "")
+
+		parts := strings.SplitN(statement, " ", 2)
+		command := strings.TrimSpace(parts[0])
+
+		var argsSlice []string
+		if len(parts) >= 2 {
+			qParts := strings.Split(parts[1], "'")
+			for pi, p := range qParts {
+				if p = strings.TrimSpace(p); p != "" && p != "\n" {
+					if pi-1 >= 0 &&
+						pi+1 <= len(qParts)-1 &&
+						qParts[pi-1] == "" &&
+						qParts[pi+1] == "" {
+						// part was quoted
+						argsSlice = append(argsSlice, p)
+					} else {
+						// part was note quoted
+						var ppSlice []string
+						for _, pp := range strings.Split(p, " ") {
+							if pp = strings.TrimSpace(pp); pp != "" {
+								ppSlice = append(ppSlice, strings.TrimSpace(pp))
+							}
+						}
+						argsSlice = append(argsSlice, strings.Join(ppSlice, " "))
+					}
+				}
+			}
+		}
 
 		switch command {
 		case "":
