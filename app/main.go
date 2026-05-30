@@ -95,7 +95,7 @@ loop:
 		var argsSlice []string
 		if len(parts) >= 2 {
 			quotes := []string{"\"", "'"}
-			argsStr := parts[1]
+			argsStr := strings.TrimSpace(parts[1])
 			argsStrLen := len(argsStr)
 			ic, iarg := 0, 0
 
@@ -117,7 +117,7 @@ loop:
 							continue argsLoop
 						}
 					}
-				} else if c == " " {
+				} else if c == " " && len(argsSlice) >= ic-1 && argsSlice[ic-1] != " " {
 					iarg = iarg + 1
 				} else {
 					if len(argsSlice) > iarg {
