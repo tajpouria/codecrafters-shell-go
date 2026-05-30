@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -85,31 +86,48 @@ loop:
 		}
 		statement = statement[:len(statement)-1]
 
-		statement = strings.ReplaceAll(statement, "''", "")
+		// echo "shell's test"'shell"s test'
+		// shell's testshells" test
 
 		parts := strings.SplitN(statement, " ", 2)
 		command := strings.TrimSpace(parts[0])
 
 		var argsSlice []string
 		if len(parts) >= 2 {
-			qParts := strings.Split(parts[1], "'")
-			for pi, p := range qParts {
-				if p = strings.TrimSpace(p); p != "" && p != "\n" {
-					if pi-1 >= 0 &&
-						pi+1 <= len(qParts)-1 &&
-						strings.TrimSpace(qParts[pi-1]) == "" &&
-						strings.TrimSpace(qParts[pi+1]) == "" {
-						// part was quoted
-						argsSlice = append(argsSlice, p)
-					} else {
-						// part was note quoted
-						for _, pp := range strings.Split(p, " ") {
-							if pp = strings.TrimSpace(pp); pp != "" {
-								argsSlice = append(argsSlice, strings.TrimSpace(pp))
+			quotes := []string{"\"", "'"}
+			argsStr := parts[1]
+			argsStrLen := len(argsStr)
+			ic, iarg := 0, 0
+
+		argsLoop:
+			for ic < argsStrLen {
+				c := string(argsStr[ic])
+				if slices.Contains(quotes, c) {
+					q := c
+					for ic2, c2 := range argsStr[ic+1:] {
+						if string(c2) == q {
+							newic := ic + 1 + ic2
+							argsSlice = append(argsSlice)
+							if len(argsSlice) > iarg {
+								argsSlice[iarg] = argsSlice[iarg] + argsStr[ic+1:newic]
+							} else {
+								argsSlice = append(argsSlice, argsStr[ic+1:newic])
 							}
+							ic = newic + 1
+							continue argsLoop
 						}
 					}
+				} else if c == " " {
+					iarg = iarg + 1
+				} else {
+					if len(argsSlice) > iarg {
+						argsSlice[iarg] = argsSlice[iarg] + c
+					} else {
+						argsSlice = append(argsSlice, c)
+					}
 				}
+
+				ic += 1
 			}
 		}
 
