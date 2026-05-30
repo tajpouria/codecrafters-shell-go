@@ -117,8 +117,10 @@ loop:
 							continue argsLoop
 						}
 					}
-				} else if c == " " && len(argsSlice) >= ic-1 && argsSlice[ic-1] != " " {
-					iarg = iarg + 1
+				} else if c == " " {
+					if len(argsSlice) > iarg && argsSlice[iarg] != " " {
+						iarg = iarg + 1
+					}
 				} else {
 					if len(argsSlice) > iarg {
 						argsSlice[iarg] = argsSlice[iarg] + c
