@@ -117,11 +117,21 @@ loop:
 							continue argsLoop
 						}
 					}
+				} else if c == "\\" {
+					if argsStrLen > ic + 1 {
+						escChar := string(argsStr[ic + 1])
+						if len(argsSlice) > iarg {
+							argsSlice[iarg] = argsSlice[iarg] + escChar
+						} else {
+							argsSlice = append(argsSlice, escChar)
+						}
+						ic += 1
+					}
 				} else if c == " " {
 					if len(argsSlice) > iarg && argsSlice[iarg] != " " {
 						iarg = iarg + 1
 					}
-				} else {
+				}  else {
 					if len(argsSlice) > iarg {
 						argsSlice[iarg] = argsSlice[iarg] + c
 					} else {
