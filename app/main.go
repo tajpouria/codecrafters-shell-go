@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strings"
 )
 
@@ -86,15 +85,11 @@ loop:
 		}
 		statement = statement[:len(statement)-1]
 
-		// echo "shell's test"'shell"s test'
-		// shell's testshells" test
-
 		parts := strings.SplitN(statement, " ", 2)
 		command := strings.TrimSpace(parts[0])
 
 		var argsSlice []string
 		if len(parts) >= 2 {
-			quotes := []string{"\"", "'"}
 			argsStr := strings.TrimSpace(parts[1])
 			argsStrLen := len(argsStr)
 			ic, iarg := 0, 0
@@ -102,12 +97,10 @@ loop:
 		argsLoop:
 			for ic < argsStrLen {
 				c := string(argsStr[ic])
-				if slices.Contains(quotes, c) {
-					q := c
+				if c == "'" {
 					for ic2, c2 := range argsStr[ic+1:] {
-						if string(c2) == q {
+						if string(c2) == "'" {
 							newic := ic + 1 + ic2
-							argsSlice = append(argsSlice)
 							if len(argsSlice) > iarg {
 								argsSlice[iarg] = argsSlice[iarg] + argsStr[ic+1:newic]
 							} else {
@@ -117,9 +110,30 @@ loop:
 							continue argsLoop
 						}
 					}
+				} else if c == "\"" { // "A \" inside double quotes"
+					quotedArg := ""
+					ic2 := ic + 1
+					for ic2 < argsStrLen {
+						c2 := string(argsStr[ic2])
+						if string(c2) == "\\" {
+							quotedArg += string(argsStr[ic2+1])
+							ic2 += 1
+						} else if string(c2) == "\"" {
+							if len(argsSlice) > iarg {
+								argsSlice[iarg] = argsSlice[iarg] + quotedArg
+							} else {
+								argsSlice = append(argsSlice, quotedArg)
+							}
+							ic = ic2 + 1
+							continue argsLoop
+						} else {
+							quotedArg += string(c2)
+						}
+						ic2 += 1
+					}
 				} else if c == "\\" {
-					if argsStrLen > ic + 1 {
-						escChar := string(argsStr[ic + 1])
+					if argsStrLen > ic+1 {
+						escChar := string(argsStr[ic+1])
 						if len(argsSlice) > iarg {
 							argsSlice[iarg] = argsSlice[iarg] + escChar
 						} else {
@@ -131,7 +145,7 @@ loop:
 					if len(argsSlice) > iarg && argsSlice[iarg] != " " {
 						iarg = iarg + 1
 					}
-				}  else {
+				} else {
 					if len(argsSlice) > iarg {
 						argsSlice[iarg] = argsSlice[iarg] + c
 					} else {
