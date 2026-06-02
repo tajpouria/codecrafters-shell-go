@@ -85,76 +85,76 @@ loop:
 		}
 		statement = statement[:len(statement)-1]
 
-		parts := strings.SplitN(statement, " ", 2)
-		command := strings.TrimSpace(parts[0])
-
-		var argsSlice []string
-		if len(parts) >= 2 {
-			argsStr := strings.TrimSpace(parts[1])
-			argsStrLen := len(argsStr)
-			ic, iarg := 0, 0
-
-		argsLoop:
-			for ic < argsStrLen {
-				c := string(argsStr[ic])
-				if c == "'" {
-					for ic2, c2 := range argsStr[ic+1:] {
-						if string(c2) == "'" {
-							newic := ic + 1 + ic2
-							if len(argsSlice) > iarg {
-								argsSlice[iarg] = argsSlice[iarg] + argsStr[ic+1:newic]
-							} else {
-								argsSlice = append(argsSlice, argsStr[ic+1:newic])
-							}
-							ic = newic + 1
-							continue argsLoop
-						}
-					}
-				} else if c == "\"" { // "A \" inside double quotes"
-					quotedArg := ""
-					ic2 := ic + 1
-					for ic2 < argsStrLen {
-						c2 := string(argsStr[ic2])
-						if string(c2) == "\\" {
-							quotedArg += string(argsStr[ic2+1])
-							ic2 += 1
-						} else if string(c2) == "\"" {
-							if len(argsSlice) > iarg {
-								argsSlice[iarg] = argsSlice[iarg] + quotedArg
-							} else {
-								argsSlice = append(argsSlice, quotedArg)
-							}
-							ic = ic2 + 1
-							continue argsLoop
+		var statementSlice []string
+		argsStr := strings.TrimSpace(statement)
+		argsStrLen := len(argsStr)
+		ic, iarg := 0, 0
+	argsLoop:
+		for ic < argsStrLen {
+			c := string(argsStr[ic])
+			if c == "'" {
+				for ic2, c2 := range argsStr[ic+1:] {
+					if string(c2) == "'" {
+						newic := ic + 1 + ic2
+						if len(statementSlice) > iarg {
+							statementSlice[iarg] = statementSlice[iarg] + argsStr[ic+1:newic]
 						} else {
-							quotedArg += string(c2)
+							statementSlice = append(statementSlice, argsStr[ic+1:newic])
 						}
-						ic2 += 1
-					}
-				} else if c == "\\" {
-					if argsStrLen > ic+1 {
-						escChar := string(argsStr[ic+1])
-						if len(argsSlice) > iarg {
-							argsSlice[iarg] = argsSlice[iarg] + escChar
-						} else {
-							argsSlice = append(argsSlice, escChar)
-						}
-						ic += 1
-					}
-				} else if c == " " {
-					if len(argsSlice) > iarg && argsSlice[iarg] != " " {
-						iarg = iarg + 1
-					}
-				} else {
-					if len(argsSlice) > iarg {
-						argsSlice[iarg] = argsSlice[iarg] + c
-					} else {
-						argsSlice = append(argsSlice, c)
+						ic = newic + 1
+						continue argsLoop
 					}
 				}
-
-				ic += 1
+			} else if c == "\"" {
+				quotedArg := ""
+				ic2 := ic + 1
+				for ic2 < argsStrLen {
+					c2 := string(argsStr[ic2])
+					if string(c2) == "\\" {
+						quotedArg += string(argsStr[ic2+1])
+						ic2 += 1
+					} else if string(c2) == "\"" {
+						if len(statementSlice) > iarg {
+							statementSlice[iarg] = statementSlice[iarg] + quotedArg
+						} else {
+							statementSlice = append(statementSlice, quotedArg)
+						}
+						ic = ic2 + 1
+						continue argsLoop
+					} else {
+						quotedArg += string(c2)
+					}
+					ic2 += 1
+				}
+			} else if c == "\\" {
+				if argsStrLen > ic+1 {
+					escChar := string(argsStr[ic+1])
+					if len(statementSlice) > iarg {
+						statementSlice[iarg] = statementSlice[iarg] + escChar
+					} else {
+						statementSlice = append(statementSlice, escChar)
+					}
+					ic += 1
+				}
+			} else if c == " " {
+				if len(statementSlice) > iarg && statementSlice[iarg] != " " {
+					iarg = iarg + 1
+				}
+			} else {
+				if len(statementSlice) > iarg {
+					statementSlice[iarg] = statementSlice[iarg] + c
+				} else {
+					statementSlice = append(statementSlice, c)
+				}
 			}
+
+			ic += 1
+		}
+
+		command := statementSlice[0]
+		var argsSlice []string
+		if len(statementSlice) > 1 {
+			argsSlice = statementSlice[1:]
 		}
 
 		switch command {
