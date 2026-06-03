@@ -157,39 +157,76 @@ loop:
 			argsSlice = statementSlice[1:]
 		}
 
+		var redirectArgSlice []string
+		for iarg, arg := range argsSlice {
+			if arg == ">" || arg == "1>" {
+				redirectArgSlice = argsSlice[iarg+1:]
+				argsSlice = argsSlice[iarg+1:]
+			}
+		}
+
+		var output string
 		switch command {
 		case "":
 			continue loop
 		case builtinCommands[Exit]:
 			break loop
 		case builtinCommands[Echo]:
-			fmt.Println(strings.Join(argsSlice, " "))
-			continue loop
+			output = strings.Join(argsSlice, " ")
 		case builtinCommands[Type]:
-			fmt.Println(getType(strings.Join(argsSlice, " ")))
-			continue loop
+			output = getType(strings.Join(argsSlice, " ") + "\n")
 		case builtinCommands[Pwd]:
 			wd, err := os.Getwd()
 			if err != nil {
 				fmt.Printf("error getting working directory: %v\n", err)
 				continue loop
 			}
-			fmt.Println(wd)
-			continue loop
+			output = wd + "\n"
 		case builtinCommands[Cd]:
 			dir := ""
 			if len(argsSlice) > 0 {
 				dir = argsSlice[0]
 			}
-			fmt.Print(changeDirectory(dir))
-			continue loop
+			output = changeDirectory(dir)
 		}
 
 		_, err = lookupExecPath(command)
 		if err == nil {
 			cmd := exec.Command(command, argsSlice...)
-			output, _ := cmd.Output()
-			fmt.Print(string(output))
+			coutput, err := cmd.CombinedOutput()
+			if err != nil {
+				fmt.Print(string(coutput))
+				continue loop
+			}
+			output = string(coutput)
+		}
+
+		if output != "" {
+			if len(redirectArgSlice) > 0 {
+				redirectAbsPath, err := filepath.Abs(redirectArgSlice[0])
+				if err != nil {
+					fmt.Printf("error getting the absolute path of the output file: %v", err)
+					continue loop
+				}
+				redirectDir := filepath.Dir(redirectAbsPath)
+				err = os.MkdirAll(redirectDir, 0755) // read/write/exec to owner, read/exec to others
+				if err != nil {
+					fmt.Printf("error making output directory: %v\n", err)
+					continue loop
+				}
+				outFile, err := os.OpenFile(redirectAbsPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+				if err != nil {
+					fmt.Printf("error opening the output file: %v\n", err)
+					continue loop
+				}
+				defer outFile.Close()
+				_, err = outFile.WriteString(output)
+				if err != nil {
+					fmt.Printf("error wrting to the output file: %v\n", err)
+				}
+			} else {
+				fmt.Print(output)
+			}
 			continue loop
 		}
 
