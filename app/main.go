@@ -161,7 +161,7 @@ loop:
 		for iarg, arg := range argsSlice {
 			if arg == ">" || arg == "1>" {
 				redirectArgSlice = argsSlice[iarg+1:]
-				argsSlice = argsSlice[iarg+1:]
+				argsSlice = argsSlice[:iarg]
 			}
 		}
 
@@ -233,3 +233,5 @@ loop:
 		fmt.Printf("%s: command not found\n", statement)
 	}
 }
+
+// ls -1 /tmp > /tmp/bee/ant.md
