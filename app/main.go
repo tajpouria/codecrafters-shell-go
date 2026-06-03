@@ -199,7 +199,6 @@ loop:
 			coutput, err := cmd.Output()
 			if err != nil {
 				fmt.Print(stderr.String())
-				continue loop
 			}
 			output = string(coutput)
 		}
