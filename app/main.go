@@ -174,7 +174,7 @@ loop:
 		case builtinCommands[Echo]:
 			output = strings.Join(argsSlice, " ")
 		case builtinCommands[Type]:
-			output = getType(strings.Join(argsSlice, " ") + "\n")
+			output = getType(strings.Join(argsSlice, " ")) + "\n"
 		case builtinCommands[Pwd]:
 			wd, err := os.Getwd()
 			if err != nil {
