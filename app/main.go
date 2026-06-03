@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -193,9 +194,11 @@ loop:
 		_, err = lookupExecPath(command)
 		if err == nil {
 			cmd := exec.Command(command, argsSlice...)
-			coutput, err := cmd.CombinedOutput()
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+			coutput, err := cmd.Output()
 			if err != nil {
-				fmt.Print(string(coutput))
+				fmt.Print(stderr.String())
 				continue loop
 			}
 			output = string(coutput)
