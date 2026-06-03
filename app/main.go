@@ -236,5 +236,3 @@ loop:
 		fmt.Printf("%s: command not found\n", statement)
 	}
 }
-
-// ls -1 /tmp > /tmp/bee/ant.md
