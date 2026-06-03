@@ -54,26 +54,26 @@ func getType(command string) string {
 	return fmt.Sprintf("%s: not found", command)
 }
 
-func changeDirectory(dir string) string {
+func changeDirectory(dir string) error {
 	if strings.HasPrefix(dir, "~") {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			return fmt.Sprintf("error getting user home directory: %v\n", err)
+			return fmt.Errorf("error getting user home directory: %v\n", err)
 		}
 		dir = strings.Replace(dir, "~", homeDir, 1)
 	}
 	if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
-		return fmt.Sprintf("cd: %s: No such file or directory\n", dir)
+		return fmt.Errorf("cd: %s: No such file or directory\n", dir)
 	} else if err != nil {
-		return fmt.Sprintf("error getting dir stats: %v\n", err)
+		return fmt.Errorf("error getting dir stats: %v\n", err)
 	}
 	// TODO: check for info.isDir() ?
 
 	if err := os.Chdir(dir); err != nil {
-		return fmt.Sprintf("error changing directory %v\n", err)
+		return fmt.Errorf("error changing directory %v\n", err)
 	}
 
-	return ""
+	return nil
 }
 
 func main() {
@@ -188,7 +188,11 @@ loop:
 			if len(argsSlice) > 0 {
 				dir = argsSlice[0]
 			}
-			output = changeDirectory(dir)
+			err = changeDirectory(dir)
+			if err != nil {
+				fmt.Print(err)
+			}
+			continue loop
 		}
 
 		_, err = lookupExecPath(command)
