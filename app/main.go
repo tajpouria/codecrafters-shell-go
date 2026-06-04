@@ -226,6 +226,7 @@ loop:
 			case 1:
 				res, redirectdepath = outRes, outRedirectArgSlice[0]
 			case 2:
+				fmt.Print(outRes)
 				res, redirectdepath = errRes, errRedirectArgSlice[0]
 			}
 			func(redirectdepath string, res string) {
@@ -249,7 +250,8 @@ loop:
 					fmt.Printf("error wrting to the redirect file: %v\n", err)
 				}
 			}(redirectdepath, res)
+		default:
+			fmt.Print(outRes)
 		}
-		fmt.Print(outRes)
 	}
 }
