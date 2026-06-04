@@ -225,6 +225,7 @@ loop:
 			switch redirectfd {
 			case 1:
 				res, redirectdepath = outRes, outRedirectArgSlice[0]
+				fmt.Print(errRes)
 			case 2:
 				fmt.Print(outRes)
 				res, redirectdepath = errRes, errRedirectArgSlice[0]
