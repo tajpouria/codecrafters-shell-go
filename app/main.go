@@ -202,20 +202,20 @@ loop:
 				fmt.Print(err)
 			}
 			continue loop
-		}
-
-		_, err = lookupExecPath(command)
-		if err == nil {
-			cmd := exec.Command(command, argsSlice...)
-			var stderr bytes.Buffer
-			cmd.Stderr = &stderr
-			coutput, err := cmd.Output()
-			if err != nil {
-				errRes = stderr.String()
+		default:
+			_, err = lookupExecPath(command)
+			if err == nil {
+				cmd := exec.Command(command, argsSlice...)
+				var stderr bytes.Buffer
+				cmd.Stderr = &stderr
+				coutput, err := cmd.Output()
+				if err != nil {
+					errRes = stderr.String()
+				}
+				outRes = string(coutput)
+			} else {
+				outRes = fmt.Sprintf("%s: command not found\n", statement)
 			}
-			outRes = string(coutput)
-		} else {
-			outRes = fmt.Sprintf("%s: command not found\n", statement)
 		}
 
 		switch redirectfd {
@@ -224,14 +224,13 @@ loop:
 			var redirectdepath string
 			switch redirectfd {
 			case 1:
-				res, redirectdepath = outRes, outRedirectArgSlice[0]
 				fmt.Print(errRes)
+				res, redirectdepath = outRes, outRedirectArgSlice[0]
 			case 2:
 				fmt.Print(outRes)
 				res, redirectdepath = errRes, errRedirectArgSlice[0]
 			}
 			func(redirectdepath string, res string) {
-
 				redirectAbsPath, err := filepath.Abs(redirectdepath)
 				if err != nil {
 					fmt.Printf("error getting the absolute path of the redirect file: %v", err)
