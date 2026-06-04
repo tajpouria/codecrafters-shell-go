@@ -182,7 +182,7 @@ loop:
 		case builtinCommands[Exit]:
 			break loop
 		case builtinCommands[Echo]:
-			outRes = strings.Join(argsSlice, " ")
+			outRes = strings.Join(argsSlice, " ") + "\n"
 		case builtinCommands[Type]:
 			outRes = getType(strings.Join(argsSlice, " ")) + "\n"
 		case builtinCommands[Pwd]:
