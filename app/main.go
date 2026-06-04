@@ -212,7 +212,7 @@ loop:
 				if err != nil {
 					errRes = stderr.String()
 				}
-				outRes = string(coutput)
+				outRes = string(coutput) + "\n"
 			} else {
 				outRes = fmt.Sprintf("%s: command not found\n", statement)
 			}
