@@ -210,9 +210,9 @@ loop:
 				cmd.Stderr = &stderr
 				coutput, err := cmd.Output()
 				if err != nil {
-					errRes = stderr.String() + "\n"
+					errRes = stderr.String()
 				}
-				outRes = string(coutput) + "\n"
+				outRes = string(coutput)
 			} else {
 				outRes = fmt.Sprintf("%s: command not found\n", statement)
 			}
@@ -224,10 +224,14 @@ loop:
 			var redirectdepath string
 			switch redirectfd {
 			case 1:
-				fmt.Print(errRes)
+				if errRes != "" {
+					fmt.Print(errRes)
+				}
 				res, redirectdepath = outRes, outRedirectArgSlice[0]
 			case 2:
-				fmt.Print(outRes)
+				if outRes != "" {
+					fmt.Print(outRes)
+				}
 				res, redirectdepath = errRes, errRedirectArgSlice[0]
 			}
 			func(redirectdepath string, res string) {
