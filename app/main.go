@@ -210,7 +210,7 @@ loop:
 				cmd.Stderr = &stderr
 				coutput, err := cmd.Output()
 				if err != nil {
-					errRes = stderr.String()
+					errRes = stderr.String() + "\n"
 				}
 				outRes = string(coutput) + "\n"
 			} else {
