@@ -158,31 +158,40 @@ loop:
 			argsSlice = statementSlice[1:]
 		}
 
-		var redirectArgSlice []string
+		var redirectfd uint = 3 // 1: stdout, 2: stderr, 3: none
+		var outRedirectArgSlice []string
+		var errRedirectArgSlice []string
 		for iarg, arg := range argsSlice {
-			if arg == ">" || arg == "1>" {
-				redirectArgSlice = argsSlice[iarg+1:]
+			switch arg {
+			case ">", "1>":
+				outRedirectArgSlice = argsSlice[iarg+1:]
 				argsSlice = argsSlice[:iarg]
+				redirectfd = 1
+			case "2>":
+				errRedirectArgSlice = argsSlice[iarg+1:]
+				argsSlice = argsSlice[:iarg]
+				redirectfd = 2
 			}
 		}
 
-		var output string
+		var outRes string
+		var errRes string
 		switch command {
 		case "":
 			continue loop
 		case builtinCommands[Exit]:
 			break loop
 		case builtinCommands[Echo]:
-			output = strings.Join(argsSlice, " ")
+			outRes = strings.Join(argsSlice, " ")
 		case builtinCommands[Type]:
-			output = getType(strings.Join(argsSlice, " ")) + "\n"
+			outRes = getType(strings.Join(argsSlice, " ")) + "\n"
 		case builtinCommands[Pwd]:
 			wd, err := os.Getwd()
 			if err != nil {
 				fmt.Printf("error getting working directory: %v\n", err)
 				continue loop
 			}
-			output = wd + "\n"
+			outRes = wd + "\n"
 		case builtinCommands[Cd]:
 			dir := ""
 			if len(argsSlice) > 0 {
@@ -202,40 +211,45 @@ loop:
 			cmd.Stderr = &stderr
 			coutput, err := cmd.Output()
 			if err != nil {
-				fmt.Print(stderr.String())
+				errRes = stderr.String()
 			}
-			output = string(coutput)
+			outRes = string(coutput)
+		} else {
+			outRes = fmt.Sprintf("%s: command not found\n", statement)
 		}
 
-		if output != "" {
-			if len(redirectArgSlice) > 0 {
-				redirectAbsPath, err := filepath.Abs(redirectArgSlice[0])
+		switch redirectfd {
+		case 1, 2:
+			var res string
+			var redirectdepath string
+			switch redirectfd {
+			case 1:
+				res, redirectdepath = outRes, outRedirectArgSlice[0]
+			case 2:
+				res, redirectdepath = errRes, errRedirectArgSlice[0]
+			}
+			func(redirectdepath string, res string) {
+
+				redirectAbsPath, err := filepath.Abs(redirectdepath)
 				if err != nil {
-					fmt.Printf("error getting the absolute path of the output file: %v", err)
-					continue loop
+					fmt.Printf("error getting the absolute path of the redirect file: %v", err)
 				}
 				redirectDir := filepath.Dir(redirectAbsPath)
 				err = os.MkdirAll(redirectDir, 0755) // read/write/exec to owner, read/exec to others
 				if err != nil {
-					fmt.Printf("error making output directory: %v\n", err)
-					continue loop
+					fmt.Printf("error making redirect directory: %v\n", err)
 				}
 				outFile, err := os.OpenFile(redirectAbsPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 				if err != nil {
-					fmt.Printf("error opening the output file: %v\n", err)
-					continue loop
+					fmt.Printf("error opening the redirect file: %v\n", err)
 				}
 				defer outFile.Close()
-				_, err = outFile.WriteString(output)
+				_, err = outFile.WriteString(res)
 				if err != nil {
-					fmt.Printf("error wrting to the output file: %v\n", err)
+					fmt.Printf("error wrting to the redirect file: %v\n", err)
 				}
-			} else {
-				fmt.Print(output)
-			}
-			continue loop
+			}(redirectdepath, res)
 		}
-
-		fmt.Printf("%s: command not found\n", statement)
+		fmt.Print(outRes)
 	}
 }
