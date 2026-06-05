@@ -159,18 +159,21 @@ loop:
 		}
 
 		var redirectfd uint = 3 // 1: stdout, 2: stderr, 3: none
+		redirectAppend := false
 		var outRedirectArgSlice []string
 		var errRedirectArgSlice []string
 		for iarg, arg := range argsSlice {
 			switch arg {
-			case ">", "1>":
+			case ">", "1>", ">>", "1>>":
 				outRedirectArgSlice = argsSlice[iarg+1:]
 				argsSlice = argsSlice[:iarg]
 				redirectfd = 1
-			case "2>":
+				redirectAppend = strings.HasSuffix(arg, ">>")
+			case "2>", "2>>":
 				errRedirectArgSlice = argsSlice[iarg+1:]
 				argsSlice = argsSlice[:iarg]
 				redirectfd = 2
+				redirectAppend = strings.HasSuffix(arg, ">>")
 			}
 		}
 
@@ -244,7 +247,13 @@ loop:
 				if err != nil {
 					fmt.Printf("error making redirect directory: %v\n", err)
 				}
-				outFile, err := os.OpenFile(redirectAbsPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+				flag := os.O_CREATE | os.O_WRONLY
+				if redirectAppend {
+					flag = flag | os.O_APPEND
+				} else {
+					flag = flag | os.O_TRUNC
+				}
+				outFile, err := os.OpenFile(redirectAbsPath, flag, 0644)
 				if err != nil {
 					fmt.Printf("error opening the redirect file: %v\n", err)
 				}
