@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"golang.org/x/term"
 )
 
 const (
@@ -77,14 +78,54 @@ func changeDirectory(dir string) error {
 }
 
 func main() {
-loop:
+	// NOTE: Cooked Mode, Raw Mode, Restoring, File Descriptor
+	stdinFd := int(os.Stdin.Fd())
+terminal:
 	for {
-		fmt.Print("$ ")
-		statement, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		oldState, err := term.MakeRaw(stdinFd)
 		if err != nil {
 			panic(err)
 		}
-		statement = statement[:len(statement)-1]
+
+		var inputLine []rune
+		buf := make([]byte, 1)
+		fmt.Print("$ ")
+	readStdin:
+		for {
+			_, err := os.Stdin.Read(buf)
+			if err != nil {
+				_ = term.Restore(stdinFd, oldState)
+				panic(err)
+			}
+			char := buf[0]
+			switch char {
+			case 3: // ASCII code for Ctrl+C
+				fmt.Printf("^C\r\n") // NOTE: Carriage Return
+				_ = term.Restore(stdinFd, oldState)
+				continue terminal
+			case 4: // ASCII code for Ctrl+D
+				_ = term.Restore(stdinFd, oldState)
+				return
+			case 9: // ASCII code for Tab
+				fmt.Println("[TAB WAS PRESSED]")
+			case 10, 13: // ASCII code for Enter
+				fmt.Printf("\r\n")
+				_ = term.Restore(stdinFd, oldState)
+				break readStdin
+			case 127, 8: // ASCII code for backspace
+				if len(inputLine) > 0 {
+					inputLine = inputLine[:len(inputLine)-1]
+					fmt.Print("\b \b") // Move cursor back (\b), overwrite with a blank space (" "), move cursor back again (\b)
+				}
+			default:
+				if char >= 32 && char <= 126 {
+					inputLine = append(inputLine, rune(char))
+					fmt.Printf("%c", char)
+				}
+			}
+		}
+
+		statement := string(inputLine)
 
 		var statementSlice []string
 		argsStr := strings.TrimSpace(statement)
@@ -181,9 +222,9 @@ loop:
 		var errRes string
 		switch command {
 		case "":
-			continue loop
+			continue terminal
 		case builtinCommands[Exit]:
-			break loop
+			break terminal
 		case builtinCommands[Echo]:
 			outRes = strings.Join(argsSlice, " ") + "\n"
 		case builtinCommands[Type]:
@@ -192,7 +233,7 @@ loop:
 			wd, err := os.Getwd()
 			if err != nil {
 				fmt.Printf("error getting working directory: %v\n", err)
-				continue loop
+				continue terminal
 			}
 			outRes = wd + "\n"
 		case builtinCommands[Cd]:
@@ -204,7 +245,7 @@ loop:
 			if err != nil {
 				fmt.Print(err)
 			}
-			continue loop
+			continue terminal
 		default:
 			_, err = lookupExecPath(command)
 			if err == nil {
