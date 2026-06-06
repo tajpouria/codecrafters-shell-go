@@ -77,8 +77,77 @@ func changeDirectory(dir string) error {
 	return nil
 }
 
+type AutoCompleteNode struct {
+	children map[rune]*AutoCompleteNode
+	isEnd    bool
+}
+
+type AutoComplete struct {
+	root *AutoCompleteNode
+}
+
+func NewAutoComplete() *AutoComplete {
+	return &AutoComplete{
+		root: &AutoCompleteNode{
+			children: make(map[rune]*AutoCompleteNode),
+		},
+	}
+}
+
+func (ac *AutoComplete) Insert(cmd []rune) {
+	cur := ac.root
+	for _, c := range cmd {
+		if _, ok := cur.children[c]; !ok {
+			cur.children[c] = &AutoCompleteNode{
+				children: make(map[rune]*AutoCompleteNode),
+			}
+		}
+		cur = cur.children[c]
+	}
+	cur.isEnd = true
+}
+
+func (ac *AutoComplete) Search(cmd []rune) [][]rune {
+	cur := ac.root
+	var resCmd []rune
+	for _, c := range cmd {
+		if _, ok := cur.children[c]; !ok {
+			return [][]rune{cmd}
+		}
+		resCmd = append(resCmd, c)
+		cur = cur.children[c]
+	}
+
+	// DFS
+	v := map[*AutoCompleteNode]struct{}{}
+	s := []*AutoCompleteNode{cur}
+	for len(s) > 0 {
+		cur = s[len(s)-1]
+		s = s[:len(s)-1]
+		if _, ok := v[cur]; ok {
+			continue
+		}
+		v[cur] = struct{}{}
+		for c, child := range cur.children {
+			s = append(s, child)
+			resCmd = append(resCmd, c)
+		}
+	}
+
+	if len(resCmd) > 0 {
+		// TODO: Handle isEnd?
+		return [][]rune{resCmd}
+	}
+
+	return [][]rune{cmd}
+}
+
 func main() {
 	// NOTE: Cooked Mode, Raw Mode, Restoring, File Descriptor
+	autoComplete := NewAutoComplete()
+	autoComplete.Insert([]rune(Echo))
+	autoComplete.Insert([]rune(Exit))
+
 	stdinFd := int(os.Stdin.Fd())
 terminal:
 	for {
@@ -90,7 +159,7 @@ terminal:
 		var inputLine []rune
 		buf := make([]byte, 1)
 		fmt.Print("$ ")
-	readStdin:
+	readline:
 		for {
 			_, err := os.Stdin.Read(buf)
 			if err != nil {
@@ -100,18 +169,22 @@ terminal:
 			char := buf[0]
 			switch char {
 			case 3: // ASCII code for Ctrl+C
-				fmt.Printf("^C\r\n") // NOTE: Carriage Return
-				_ = term.Restore(stdinFd, oldState)
-				continue terminal
+				fmt.Print("^C\r\n") // NOTE: Carriage Return
+				inputLine = nil
+				fmt.Print("$ ")
 			case 4: // ASCII code for Ctrl+D
 				_ = term.Restore(stdinFd, oldState)
 				return
 			case 9: // ASCII code for Tab
-				fmt.Println("[TAB WAS PRESSED]")
+				cmdRes := autoComplete.Search(inputLine)
+				if len(cmdRes) > 0 {
+					inputLine = cmdRes[0] // TODO: Iterate
+				}
+				fmt.Printf("\r\n$ %s", string(inputLine))
 			case 10, 13: // ASCII code for Enter
 				fmt.Printf("\r\n")
 				_ = term.Restore(stdinFd, oldState)
-				break readStdin
+				break readline
 			case 127, 8: // ASCII code for backspace
 				if len(inputLine) > 0 {
 					inputLine = inputLine[:len(inputLine)-1]
