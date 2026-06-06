@@ -181,7 +181,7 @@ terminal:
 				if len(cmdRes) > 0 {
 					inputLine = cmdRes[0] // TODO: Iterate
 				}
-				fmt.Printf("\r\n$ %s", string(inputLine))
+				fmt.Printf("\r$ %s", string(inputLine))
 			case 10, 13: // ASCII code for Enter
 				fmt.Printf("\r\n")
 				_ = term.Restore(stdinFd, oldState)
