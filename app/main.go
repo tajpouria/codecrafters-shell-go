@@ -136,6 +136,7 @@ func (ac *AutoComplete) Search(cmd []rune) [][]rune {
 
 	if len(resCmd) > 0 {
 		// TODO: Handle isEnd?
+		resCmd = append(resCmd, ' ')
 		return [][]rune{resCmd}
 	}
 
