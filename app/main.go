@@ -112,7 +112,7 @@ func (ac *AutoComplete) Search(cmd []rune) [][]rune {
 	var resCmd []rune
 	for _, c := range cmd {
 		if _, ok := cur.children[c]; !ok {
-			return [][]rune{cmd}
+			return nil
 		}
 		resCmd = append(resCmd, c)
 		cur = cur.children[c]
@@ -178,10 +178,12 @@ terminal:
 				return
 			case 9: // ASCII code for Tab
 				cmdRes := autoComplete.Search(inputLine)
-				if len(cmdRes) > 0 {
+				if cmdRes == nil {
+					fmt.Print("\x07")
+				} else {
 					inputLine = cmdRes[0] // TODO: Iterate
+					fmt.Printf("\r$ %s", string(inputLine))
 				}
-				fmt.Printf("\r$ %s", string(inputLine))
 			case 10, 13: // ASCII code for Enter
 				fmt.Printf("\r\n")
 				_ = term.Restore(stdinFd, oldState)
